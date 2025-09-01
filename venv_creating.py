@@ -5,11 +5,6 @@ import shutil
 from dependency import install_dependencies
 
 def setup(env_name="sbom-env", project_path=None):
-    """
-    Create a virtual environment in the current folder,
-    install dependencies from the specified project folder,
-    and return the venv path.
-    """
     venv_path = env_name
     print(f"\nCreating venv for project at: {project_path}")
 
@@ -40,4 +35,5 @@ def remove_venv(venv_path):
     """Remove only the virtual environment folder itself."""
     print(f"\nRemoving virtual environment folder: {venv_path}")
     shutil.rmtree(venv_path, ignore_errors=True)
+
     print("Virtual environment removed successfully.")
