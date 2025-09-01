@@ -167,7 +167,7 @@ def generate_sbom(venv_path=".sbom-env"):
 # ----------------------------
 def run_trivy_scan():
     print("\n🔍 Running Trivy SBOM scan...")
-    run_with_retry(["trivy", "sbom", "sbom-p.json", "--format", "cyclonedx", "-o", "sbom.json"], show_output=True)
+    run_with_retry(["trivy", "sbom", "sbom-p.json", "--format", "cyclonedx","--scanners", "vuln", "-o", "sbom.json"], show_output=True)
     print("✅ Trivy scan results saved to sbom.json")
 
 # ----------------------------
@@ -271,3 +271,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
