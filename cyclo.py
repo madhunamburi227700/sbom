@@ -21,9 +21,8 @@ def generate_sbom(env_name, requirements_file, output_file):
 
     print(f"\n📦 Generating SBOM from '{requirements_file}' → '{output_file}'...")
     subprocess.run([
-        python_exec, "-m", "cyclonedx_py", "requirements",
-        requirements_file,
-        "--output-file", output_file
+        os.path.join(os.getcwd(), env_name, "Scripts" if platform.system() == "Windows" else "bin", "cyclonedx-py"),
+        "requirements", requirements_file, "-o", output_file
     ], check=True)
 
     print(f"\n✅ SBOM successfully saved to '{output_file}'")

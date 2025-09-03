@@ -1,74 +1,60 @@
 import os
-import re
 import json
-import sys
 
-LINE_PARSE_RE = re.compile(r'^(?P<prefix>(?:\|   |    )*)(?P<edge>\|--|\+--)?\s*(?P<body>.+)$')
-BODY_RE = re.compile(r'^(?P<name>[^\s(<>!=~]+)\s*(?P<spec>[<>=!~][^()]*)?\s*\((?P<installed>[^)]+)\)\s*$')
+def load_dependencies_from_json(file_path):
+    """Load dependencies directly from pipgrip's --tree-json-exact output."""
+    if not os.path.exists(file_path):
+        print(f"❌ Error: File '{file_path}' not found.")
+        return {}
 
-def parse_pip_dependencies(file_path):
     try:
         with open(file_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-    except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found.")
-        return {"dependencies": []}
+            data = json.load(f)
+    except json.JSONDecodeError:
+        print(f"❌ Error: File '{file_path}' is not valid JSON.")
+        return {}
 
-    dependencies = []
-    stack = []
+    return data  # dict with "pkg==version": {deps...}
 
-    def depth_from_prefix(prefix, edge):
-        groups = re.findall(r'(?:\|   |    )', prefix)
-        return len(groups) + (1 if edge else 0)
 
-    def create_dep(body):
-        m = BODY_RE.match(body.strip())
-        if m:
-            return {
-                "package_name": m.group("name").strip(),
-                "installed_version": m.group("installed").strip(),
-                "required_version": (m.group("spec") or "Any").strip(),
-                "dependencies": []
-            }
-        return {
-            "package_name": body.strip(),
-            "installed_version": "",
-            "required_version": "Any",
-            "dependencies": []
+def convert_json(json_input="dets.json", json_output="normalized_deps.json"):
+    """
+    Convert pipgrip JSON output (tree-json-exact) into normalized format:
+    {
+      "dependencies": [
+        {
+          "package_name": "foo",
+          "installed_version": "1.2.3",
+          "required_version": "Any",
+          "dependencies": [...]
         }
+      ]
+    }
+    """
+    raw_data = load_dependencies_from_json(json_input)
 
-    for line in lines:
-        line = line.rstrip("\n")
-        stripped = line.strip()
-        if not stripped or stripped.startswith(". "):
-            continue
+    def normalize(node_dict):
+        deps = []
+        for key, subdeps in node_dict.items():
+            # key looks like "package==1.2.3"
+            if "==" in key:
+                pkg, ver = key.split("==", 1)
+            else:
+                pkg, ver = key, ""
 
-        m = LINE_PARSE_RE.match(line)
-        if not m:
-            continue
+            deps.append({
+                "package_name": pkg,
+                "installed_version": ver,
+                "required_version": "Any",
+                "dependencies": normalize(subdeps) if isinstance(subdeps, dict) else []
+            })
+        return deps
 
-        prefix, edge, body = m.group("prefix"), m.group("edge"), m.group("body")
-        dep = create_dep(body)
-        depth = depth_from_prefix(prefix, edge)
+    normalized = normalize(raw_data)
 
-        while stack and stack[-1]["depth"] >= depth:
-            stack.pop()
+    with open(json_output, "w", encoding="utf-8") as f:
+        json.dump({"dependencies": normalized}, f, indent=2)
 
-        if stack:
-            stack[-1]["node"]["dependencies"].append(dep)
-        else:
-            dependencies.append(dep)
+    print(f"✅ Normalized dependencies saved to {json_output}")
+    return normalized
 
-        stack.append({"depth": depth, "node": dep})
-
-    return {"dependencies": dependencies}
-
-
-def convert_txt_to_json(txt_file="dets.txt", json_file="dets.json"):
-    if not os.path.exists(txt_file):
-        print(f"{txt_file} not found.")
-        return
-    data = parse_pip_dependencies(txt_file)
-    with open(json_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-    print(f"{json_file} saved successfully.")
