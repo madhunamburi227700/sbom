@@ -42,7 +42,7 @@ def install_dependencies(env_name, project_path):
     if pyproject_files:
         for pyproject in pyproject_files:
             subprocess.run(["uv", "pip", "compile", "--all-extras", pyproject, "-o", "all-dep.txt"], check=True)
-            subprocess.run(pipgrip_cmd + ["--tree", "-r", "all-dep.txt"], stdout=open("dets.txt", "w"), check=True)
+            subprocess.run(pipgrip_cmd + ["--tree-json-exact", "-r", "all-dep.txt"], stdout=open("dets.json", "w"), check=True)
     # Process requirements.txt
     elif requirements_files:
         for req_file in requirements_files:
@@ -51,4 +51,4 @@ def install_dependencies(env_name, project_path):
             if not lines:
                 continue
             subprocess.run(["uv", "pip", "compile", req_file, "-o", "all-dep.txt"], check=True)
-            subprocess.run(pipgrip_cmd + ["--tree", "-r", "all-dep.txt"], stdout=open("dets.txt", "w"), check=True)
+            subprocess.run(pipgrip_cmd + ["--tree-json-exact", "-r", "all-dep.txt"], stdout=open("dets.json", "w"), check=True)
